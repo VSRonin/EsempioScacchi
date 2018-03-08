@@ -23,17 +23,17 @@ QDebug operator<<(QDebug stream, const Pezzo &pezzo)
         return stream << "Invalido";
     switch (pezzo.tipo) {
     case Pezzo::Tipo::Pedone:
-        return stream << (pezzo.colore == Pezzo::Colore::Bianco ? QChar(0x2659) : QChar(0x265F));
+        return stream << (pezzo.colore == Pezzo::Colore::Bianco ? "Pedone Bianco" : "Pedone Nero");
     case Pezzo::Tipo::Torre:
-       return stream << (pezzo.colore == Pezzo::Colore::Bianco ? QChar(0x2656) : QChar(0x265C));
+       return stream << (pezzo.colore == Pezzo::Colore::Bianco ? "Torre Bianca" : "Torre Nera");
     case Pezzo::Tipo::Cavallo:
-        return stream << (pezzo.colore == Pezzo::Colore::Bianco ? QChar(0x2658) : QChar(0x265E));
+        return stream << (pezzo.colore == Pezzo::Colore::Bianco ? "Cavallo Bianco" : "Cavallo Nero");
     case Pezzo::Tipo::Alfiere:
-        return stream << (pezzo.colore == Pezzo::Colore::Bianco ? QChar(0x2657) : QChar(0x265D));
+        return stream << (pezzo.colore == Pezzo::Colore::Bianco ? "Alfiere Bianco" : "Alfiere Nero");
     case Pezzo::Tipo::Regina:
-        return stream << (pezzo.colore == Pezzo::Colore::Bianco ? QChar(0x2655) : QChar(0x265B));
+        return stream << (pezzo.colore == Pezzo::Colore::Bianco ? "Regina Bianca" : "Regina Nera");
     case Pezzo::Tipo::Re:
-         return stream << (pezzo.colore == Pezzo::Colore::Bianco ? QChar(0x2654) : QChar(0x265A));
+         return stream << (pezzo.colore == Pezzo::Colore::Bianco ? "Re Bianco" : "Re Nero");
     default:
         return stream << "Invalido";
     }
