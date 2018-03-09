@@ -64,11 +64,11 @@ void Scacchiera::startGame(){
     }
     Pezzo tempPezzo(Pezzo::Tipo::Pedone,Pezzo::Colore::Nero);
     for(int i=0;i<8;++i){
-        m_model->setData(m_model->index(1,i),QVariant::fromValue(tempPezzo));
+        //m_model->setData(m_model->index(1,i),QVariant::fromValue(tempPezzo));
     }
     tempPezzo.colore = Pezzo::Colore::Bianco;
     for(int i=0;i<8;++i){
-        m_model->setData(m_model->index(6,i),QVariant::fromValue(tempPezzo));
+        //m_model->setData(m_model->index(6,i),QVariant::fromValue(tempPezzo));
     }
     tempPezzo.tipo=Pezzo::Tipo::Torre;
     m_model->setData(m_model->index(7,0),QVariant::fromValue(tempPezzo));
@@ -214,9 +214,12 @@ bool Scacchiera::controllaArrocco(Pezzo::Colore colr, bool aSinistra) const
         return false; // non si puo' arrocare se si e' sotto scacco
     Q_ASSERT(dataRe.value<Pezzo>().colore == dataTorre.value<Pezzo>().colore);
     Q_ASSERT(dataRe.value<Pezzo>().colore==colr);
-    for(int i=qMin(colonnaTorre,4)+1;i<qMax(4,colonnaTorre);++i)
-        if(m_model->index(actionRow,i).data().isValid())
+    for(int i=qMin(colonnaTorre,4)+1;i<qMax(4,colonnaTorre);++i){
+        if(m_model->index(actionRow,i).data().isValid()) // la via tra re e torre non e' libera
             return false;
+        if(scacco(colr,QPoint(i,actionRow))) //il re, durante il movimento dell'arrocco, non deve attraversare caselle in cui si troverebbe sotto scacco.
+            return false;
+    }
     return true;
 }
 
@@ -405,8 +408,6 @@ bool Scacchiera::scacco(Pezzo::Colore colr, const QPoint &posRe) const
 {
     Q_ASSERT(colr!=Pezzo::Colore::Nessuno);
     Q_ASSERT(posRe.x()>=0 && posRe.y()>=0 && posRe.x()<8 && posRe.y()<8);
-    Q_ASSERT(indexForPoint(posRe).data().isValid());
-    Q_ASSERT(indexForPoint(posRe).data().value<Pezzo>().colore == colr);
     for(int i=0;i<8;++i){
         for(int j=0;j<8;++j){
             const QVariant dataCella = m_model->index(i,j).data();
