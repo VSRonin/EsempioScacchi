@@ -10,11 +10,13 @@ uint qHash(Pezzo::Colore key, uint seed){
 Pezzo::Pezzo()
     : tipo(Pezzo::Tipo::Nessuno)
     , colore(Pezzo::Colore::Nessuno)
+    , primaMossa(true)
 {}
 
 Pezzo::Pezzo(Pezzo::Tipo tp, Pezzo::Colore cl)
     : tipo(tp)
     , colore(cl)
+    , primaMossa(true)
 {}
 
 QDebug operator<<(QDebug stream, const Pezzo &pezzo)

@@ -32,4 +32,5 @@ SOURCES += \
 HEADERS += \
     pezzo.h \
     scacchiera.h \
-    pezzodelegate.h
+    pezzodelegate.h \
+    scacchiglobal.h

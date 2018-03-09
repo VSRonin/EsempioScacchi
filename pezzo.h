@@ -21,6 +21,7 @@ public:
     };
     Tipo tipo;
     Colore colore;
+    bool primaMossa;
     Pezzo();
     Pezzo(Tipo tp, Colore cl);
     Pezzo(const Pezzo&)=default;
