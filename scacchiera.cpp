@@ -64,11 +64,11 @@ void Scacchiera::startGame(){
     }
     Pezzo tempPezzo(Pezzo::Tipo::Pedone,Pezzo::Colore::Nero);
     for(int i=0;i<8;++i){
-        //m_model->setData(m_model->index(1,i),QVariant::fromValue(tempPezzo));
+        m_model->setData(m_model->index(1,i),QVariant::fromValue(tempPezzo));
     }
     tempPezzo.colore = Pezzo::Colore::Bianco;
     for(int i=0;i<8;++i){
-        //m_model->setData(m_model->index(6,i),QVariant::fromValue(tempPezzo));
+        m_model->setData(m_model->index(6,i),QVariant::fromValue(tempPezzo));
     }
     tempPezzo.tipo=Pezzo::Tipo::Torre;
     m_model->setData(m_model->index(7,0),QVariant::fromValue(tempPezzo));
