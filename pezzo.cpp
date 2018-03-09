@@ -19,6 +19,10 @@ Pezzo::Pezzo(Pezzo::Tipo tp, Pezzo::Colore cl)
     , primaMossa(true)
 {}
 
+bool Pezzo::operator==(const Pezzo &other) const{
+    return tipo==other.tipo && colore==other.colore;
+}
+
 QDebug operator<<(QDebug stream, const Pezzo &pezzo)
 {
     if(pezzo.colore==Pezzo::Colore::Nessuno)

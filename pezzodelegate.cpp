@@ -44,12 +44,11 @@ void PezzoDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option,
     QStyleOptionViewItem opt = option;
     initStyleOption(&opt, index);
     opt.font = QFont("Arial",20);
+    if(index.data(ScaccoRole).toInt()==CellaScacco)
+        opt.backgroundBrush = QBrush(Qt::red);
     switch(index.data(StatusCellRole).toInt()){
     case PezzoSelezionato:
         opt.backgroundBrush = QBrush(QColor(108, 161, 247));
-        break;
-    case CellaScacco:
-        opt.backgroundBrush = QBrush(Qt::red);
         break;
     case CellaVuotaMuovibile:
         opt.backgroundBrush = QBrush(m_baseMovibile.scaled(option.rect.size()));
