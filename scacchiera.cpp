@@ -8,6 +8,7 @@
 #include "pezzodelegate.h"
 #include "scacchiglobal.h"
 #include <QLabel>
+#include <QPushButton>
 #include <QMessageBox>
 Scacchiera::Scacchiera(QWidget *parent)
     : QWidget(parent)
@@ -36,10 +37,8 @@ Scacchiera::Scacchiera(QWidget *parent)
         m_model->setHeaderData(i,Qt::Horizontal,QChar('A'+i));
         m_model->setHeaderData(i,Qt::Vertical,i+1);
         for(int j=0;j<8;++j){
-            m_model->setItemData(m_model->index(i,j), {
-                std::make_pair<int,QVariant>(Qt::BackgroundRole,QBrush(j%2==i%2 ? Qt::white : Qt::lightGray))
-                , std::make_pair<int,QVariant>(Qt::TextAlignmentRole,Qt::AlignCenter)
-            });
+            m_model->setData(m_model->index(i,j),Qt::AlignCenter,Qt::TextAlignmentRole);
+            m_model->setData(m_model->index(i,j), QBrush(j%2==i%2 ? Qt::white : Qt::lightGray),Qt::BackgroundRole);
             m_model->item(i,j)->setFlags(Qt::ItemIsEnabled);
         }
     }
@@ -57,11 +56,10 @@ Scacchiera::Scacchiera(QWidget *parent)
 void Scacchiera::startGame(){
     m_turnoBianco=true;
     for(int i=0;i<8;++i){
-        for(int j=0;j<8;++j)
-                m_model->setItemData(m_model->index(i,j),{
-                    std::make_pair<int,QVariant>(StatusCellRole,QVariant())
-                    , std::make_pair<int,QVariant>(Qt::EditRole,QVariant())
-                });
+        for(int j=0;j<8;++j){
+            m_model->setData(m_model->index(i,j),QVariant(),StatusCellRole);
+            m_model->setData(m_model->index(i,j),QVariant());
+        }
     }
     Pezzo tempPezzo(Pezzo::Tipo::Pedone,Pezzo::Colore::Nero);
     for(int i=0;i<8;++i){
@@ -147,6 +145,26 @@ void Scacchiera::cliccato(const QModelIndex& idx)
                 m_model->setData(m_model->index(m_pezzoCorrente.y(),idx.column()>m_pezzoCorrente.x() ? 5:2),QVariant::fromValue(tempTorre));
                 m_model->setData(idxTorre,QVariant());
             }
+            else if((idx.row()==0 || idx.row()==7) && tempPezzo.tipo == Pezzo::Tipo::Pedone){
+                // pedone raggiunge la fine
+                QMessageBox domandaTrasformazione;
+                domandaTrasformazione.setWindowTitle(tr("Trasforma Pedone"));
+                domandaTrasformazione.setText(tr("In cosa vuoi trasformare il pedone?"));
+                QPushButton *reginaBut =domandaTrasformazione.addButton(tr("Regina"),QMessageBox::AcceptRole);
+                QPushButton *torreBut =domandaTrasformazione.addButton(tr("Torre"),QMessageBox::AcceptRole);
+                QPushButton *alfiereBut =domandaTrasformazione.addButton(tr("Alfiere"),QMessageBox::AcceptRole);
+                QPushButton *cavalloBut =domandaTrasformazione.addButton(tr("Cavallo"),QMessageBox::AcceptRole);
+                domandaTrasformazione.exec();
+                if(domandaTrasformazione.clickedButton()==cavalloBut)
+                    tempPezzo.tipo = Pezzo::Tipo::Cavallo;
+                else if(domandaTrasformazione.clickedButton()==torreBut)
+                    tempPezzo.tipo = Pezzo::Tipo::Torre;
+                else if(domandaTrasformazione.clickedButton()==reginaBut)
+                    tempPezzo.tipo = Pezzo::Tipo::Regina;
+                else if(domandaTrasformazione.clickedButton()==alfiereBut)
+                    tempPezzo.tipo = Pezzo::Tipo::Alfiere;
+
+            }
             m_model->setData(idx,QVariant::fromValue(tempPezzo));
             m_model->setData(m_model->index(m_pezzoCorrente.y(),m_pezzoCorrente.x()),QVariant());
             cambiaTurno();
@@ -205,7 +223,8 @@ void Scacchiera::filtraScacco(QList<QPoint> &mosse,const QPoint &pedina) const
     Q_ASSERT(pedina.x()>=0 && pedina.y()>=0 && pedina.x()<8 && pedina.y()<8);
     Q_ASSERT(m_model->index(pedina.y(),pedina.x()).data().isValid());
     Pezzo pezzoDaMuovere = m_model->index(pedina.y(),pedina.x()).data().value<Pezzo>();
-    if(!scacco(pezzoDaMuovere.colore))
+    const QPoint posRe = posizioneRe(pezzoDaMuovere.colore);
+    if(m_model->index(posRe.y(),posRe.x()).data(StatusCellRole).toInt()!=CellaScacco)
         return;
     pezzoDaMuovere.primaMossa=false;
     for(QList<QPoint>::iterator i=mosse.begin();i!=mosse.end();){
