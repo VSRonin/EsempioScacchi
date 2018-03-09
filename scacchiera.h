@@ -2,10 +2,11 @@
 #define WIDGET_H
 
 #include <QWidget>
+#include <QList>
+#include "pezzo.h"
 class QTableView;
 class QStandardItemModel;
 class QLabel;
-class Pezzo;
 class Scacchiera : public QWidget
 {
     Q_OBJECT
@@ -20,13 +21,18 @@ private:
     QLabel* m_turnoLabel;
     bool m_turnoBianco;
     Q_SLOT void cliccato(const QModelIndex &idx);
-    std::pair<int,int> m_pezzoCorrente;
-    void calcolaMossePossibili();
+    QPoint m_pezzoCorrente;
+    void formattaMossePossibili();
     void rimuoviTuttiStati();
     void cambiaTurno();
-    bool scacco() const;
-    bool stallo() const;
-    void controllaDiagonalePedone(int rig, int colDiag, const Pezzo& pedone);
+    QPoint posizioneRe(Pezzo::Colore colr) const;
+    bool scacco(Pezzo::Colore colr, const QPoint& posRe) const;
+    bool scacco(Pezzo::Colore colr) const;
+    bool stallo(Pezzo::Colore colr) const;
+    bool controllaDiagonalePedone(int rig, int colDiag, const Pezzo& pedone) const;
+    bool controllaArrocco(Pezzo::Colore colr, bool aSinistra) const;
+    void filtraScacco(QList<QPoint>& mosse,const QPoint& pedina) const;
+    QList<QPoint> mossePossibili(const QPoint& pedina) const;
 };
 
 

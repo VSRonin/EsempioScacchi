@@ -25,6 +25,7 @@ public:
     Pezzo();
     Pezzo(Tipo tp, Colore cl);
     Pezzo(const Pezzo&)=default;
+    bool operator==(const Pezzo& other) const;
 };
 Q_DECLARE_METATYPE(Pezzo)
 uint qHash(Pezzo::Tipo key, uint seed = 0);
