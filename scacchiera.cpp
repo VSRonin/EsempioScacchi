@@ -210,6 +210,8 @@ bool Scacchiera::controllaArrocco(Pezzo::Colore colr, bool aSinistra) const
         return false;
     if(!dataTorre.value<Pezzo>().primaMossa)
         return false;
+    if(m_model->index(actionRow,4).data(ScaccoRole).isValid())
+        return false; // non si puo' arrocare se si e' sotto scacco
     Q_ASSERT(dataRe.value<Pezzo>().colore == dataTorre.value<Pezzo>().colore);
     Q_ASSERT(dataRe.value<Pezzo>().colore==colr);
     for(int i=qMin(colonnaTorre,4)+1;i<qMax(4,colonnaTorre);++i)
