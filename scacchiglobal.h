@@ -3,6 +3,7 @@
 #include <QtGlobal>
 enum {
     StatusCellRole = Qt::UserRole
+    , ScaccoRole
 };
 enum CellStatus{
     Vuoto

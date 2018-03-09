@@ -58,6 +58,7 @@ void Scacchiera::startGame(){
     for(int i=0;i<8;++i){
         for(int j=0;j<8;++j){
             m_model->setData(m_model->index(i,j),QVariant(),StatusCellRole);
+            m_model->setData(m_model->index(i,j),QVariant(),ScaccoRole);
             m_model->setData(m_model->index(i,j),QVariant());
         }
     }
@@ -129,7 +130,7 @@ void Scacchiera::cliccato(const QModelIndex& idx)
         if(m_pezzoCorrente.y() == idx.row() && m_pezzoCorrente.x() == idx.column()){ //deseleziona pezzo corrente
             m_pezzoCorrente.setX(-1);
             m_pezzoCorrente.setY(-1);
-            rimuoviTuttiStati();
+            rimuoviTuttiStati(false);
         }
         switch(idx.data(StatusCellRole).toInt()){
         case CellaMangiabile:
@@ -169,8 +170,6 @@ void Scacchiera::cliccato(const QModelIndex& idx)
             m_model->setData(m_model->index(m_pezzoCorrente.y(),m_pezzoCorrente.x()),QVariant());
             cambiaTurno();
         }break;
-        case CellaScacco:
-            Q_UNREACHABLE();
         default: break;
         }
     }
@@ -179,7 +178,8 @@ void Scacchiera::cliccato(const QModelIndex& idx)
 void Scacchiera::formattaMossePossibili()
 {
     if(m_pezzoCorrente.y()<0) return;
-    const QList<QPoint> mosse = mossePossibili(m_pezzoCorrente);
+    QList<QPoint> mosse = mossePossibili(m_pezzoCorrente);
+    filtraScacco(mosse,m_pezzoCorrente);
     for(QList<QPoint>::const_iterator i = mosse.constBegin();i!=mosse.constEnd();++i){
         const QModelIndex currIdx=m_model->index(i->y(),i->x());
         m_model->setData(currIdx,currIdx.data().isValid() ? CellaMangiabile : CellaVuotaMuovibile,StatusCellRole);
@@ -222,22 +222,24 @@ void Scacchiera::filtraScacco(QList<QPoint> &mosse,const QPoint &pedina) const
 {
     Q_ASSERT(pedina.x()>=0 && pedina.y()>=0 && pedina.x()<8 && pedina.y()<8);
     Q_ASSERT(m_model->index(pedina.y(),pedina.x()).data().isValid());
-    Pezzo pezzoDaMuovere = m_model->index(pedina.y(),pedina.x()).data().value<Pezzo>();
+    const QVariant pezzovariant =m_model->index(pedina.y(),pedina.x()).data();
+    Pezzo pezzoDaMuovere = pezzovariant.value<Pezzo>();
     const QPoint posRe = posizioneRe(pezzoDaMuovere.colore);
-    if(m_model->index(posRe.y(),posRe.x()).data(StatusCellRole).toInt()!=CellaScacco)
+    if(pezzoDaMuovere.tipo != Pezzo::Tipo::Re && m_model->index(posRe.y(),posRe.x()).data(ScaccoRole).toInt()!=CellaScacco)
         return;
     pezzoDaMuovere.primaMossa=false;
     for(QList<QPoint>::iterator i=mosse.begin();i!=mosse.end();){
         // simula la mossa
         const QVariant oldVal = m_model->index(i->y(),i->x()).data();
         m_model->setData(m_model->index(i->y(),i->x()),QVariant::fromValue(pezzoDaMuovere));
+        m_model->setData(m_model->index(pedina.y(),pedina.x()),QVariant());
         bool ancoraScacco = scacco(pezzoDaMuovere.colore);
         m_model->setData(m_model->index(i->y(),i->x()),oldVal);
+        m_model->setData(m_model->index(pedina.y(),pedina.x()),pezzovariant);
         if(ancoraScacco)
             i=mosse.erase(i);
         else
             ++i;
-
     }
 }
 
@@ -344,28 +346,34 @@ QList<QPoint> Scacchiera::mossePossibili(const QPoint &pedina) const
             result.append(QPoint(6,pedina.y()));
     }break;
     }
-    filtraScacco(result,pedina);
     return result;
 }
 
-void Scacchiera::rimuoviTuttiStati()
+QModelIndex Scacchiera::indexForPoint(const QPoint &pnt) const{
+    return m_model->index(pnt.y(),pnt.x());
+}
+
+void Scacchiera::rimuoviTuttiStati(bool rimuoviScacco)
 {
     for(int i=0;i<8;++i){
-        for(int j=0;j<8;++j)
-            if(m_model->index(i,j).data(StatusCellRole)!=CellaScacco)
-                m_model->setData(m_model->index(i,j),QVariant(),StatusCellRole);
+        for(int j=0;j<8;++j){
+            m_model->setData(m_model->index(i,j),QVariant(),StatusCellRole);
+            if(rimuoviScacco)
+                m_model->setData(m_model->index(i,j),QVariant(),ScaccoRole);
+        }
     }
 }
 
 void Scacchiera::cambiaTurno()
 {
+    rimuoviTuttiStati(true);
     m_pezzoCorrente.setX(-1);
     m_pezzoCorrente.setY(-1);
     m_turnoBianco = !m_turnoBianco;
     const QPoint posRe = posizioneRe(m_turnoBianco ? Pezzo::Colore::Bianco : Pezzo::Colore::Nero);
     const bool isScacco = scacco(m_turnoBianco ? Pezzo::Colore::Bianco : Pezzo::Colore::Nero,posRe);
     if(isScacco)
-        m_model->setData(m_model->index(posRe.y(),posRe.x()),CellaScacco,StatusCellRole);
+        m_model->setData(indexForPoint(posRe),CellaScacco,ScaccoRole);
     const bool isStallo = stallo(m_turnoBianco ? Pezzo::Colore::Bianco : Pezzo::Colore::Nero);
     if(isStallo){
         if(isScacco)
@@ -375,7 +383,7 @@ void Scacchiera::cambiaTurno()
         return startGame();
     }
     m_turnoLabel->setText(tr("Turno di %1").arg(m_turnoBianco ? QChar(0x2654) : QChar(0x265A)));
-    rimuoviTuttiStati();
+
 }
 
 QPoint Scacchiera::posizioneRe(Pezzo::Colore colr) const
@@ -395,8 +403,8 @@ bool Scacchiera::scacco(Pezzo::Colore colr, const QPoint &posRe) const
 {
     Q_ASSERT(colr!=Pezzo::Colore::Nessuno);
     Q_ASSERT(posRe.x()>=0 && posRe.y()>=0 && posRe.x()<8 && posRe.y()<8);
-    Q_ASSERT(m_model->index(posRe.y(),posRe.x()).data().isValid());
-    Q_ASSERT(m_model->index(posRe.y(),posRe.x()).data().value<Pezzo>().colore == colr);
+    Q_ASSERT(indexForPoint(posRe).data().isValid());
+    Q_ASSERT(indexForPoint(posRe).data().value<Pezzo>().colore == colr);
     for(int i=0;i<8;++i){
         for(int j=0;j<8;++j){
             const QVariant dataCella = m_model->index(i,j).data();
@@ -422,8 +430,10 @@ bool Scacchiera::stallo(Pezzo::Colore colr) const
         for(int j=0;j<8;++j){
             const QVariant dataCella = m_model->index(i,j).data();
             if(dataCella.isValid()){
-                if(dataCella.value<Pezzo>().colore != colr){
-                    if(!mossePossibili(QPoint(j,i)).isEmpty())
+                if(dataCella.value<Pezzo>().colore == colr){
+                    QList<QPoint> tutteLeMosse = mossePossibili(QPoint(j,i));
+                    filtraScacco(tutteLeMosse,QPoint(j,i));
+                    if(!tutteLeMosse.isEmpty())
                         return false;
                 }
             }

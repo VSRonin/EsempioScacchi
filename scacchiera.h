@@ -23,7 +23,7 @@ private:
     Q_SLOT void cliccato(const QModelIndex &idx);
     QPoint m_pezzoCorrente;
     void formattaMossePossibili();
-    void rimuoviTuttiStati();
+    void rimuoviTuttiStati(bool rimuoviScacco);
     void cambiaTurno();
     QPoint posizioneRe(Pezzo::Colore colr) const;
     bool scacco(Pezzo::Colore colr, const QPoint& posRe) const;
@@ -33,6 +33,7 @@ private:
     bool controllaArrocco(Pezzo::Colore colr, bool aSinistra) const;
     void filtraScacco(QList<QPoint>& mosse,const QPoint& pedina) const;
     QList<QPoint> mossePossibili(const QPoint& pedina) const;
+    QModelIndex indexForPoint(const QPoint& pnt) const;
 };
 
 
