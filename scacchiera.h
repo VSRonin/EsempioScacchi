@@ -29,7 +29,7 @@ private:
     bool scacco(Pezzo::Colore colr, const QPoint& posRe) const;
     bool scacco(Pezzo::Colore colr) const;
     bool stallo(Pezzo::Colore colr) const;
-    bool controllaDiagonalePedone(int rig, int colDiag, const Pezzo& pedone) const;
+    bool controllaDiagonalePedone(int rigaPartenza, int rigaArrivo, int colDiag, const Pezzo& pedone) const;
     bool controllaArrocco(Pezzo::Colore colr, bool aSinistra) const;
     void filtraScacco(QList<QPoint>& mosse,const QPoint& pedina) const;
     QList<QPoint> mossePossibili(const QPoint& pedina) const;

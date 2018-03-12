@@ -55,10 +55,9 @@ Scacchiera::Scacchiera(QWidget *parent)
 }
 void Scacchiera::startGame(){
     m_turnoBianco=true;
+    rimuoviTuttiStati(true);
     for(int i=0;i<8;++i){
         for(int j=0;j<8;++j){
-            m_model->setData(m_model->index(i,j),QVariant(),StatusCellRole);
-            m_model->setData(m_model->index(i,j),QVariant(),ScaccoRole);
             m_model->setData(m_model->index(i,j),QVariant());
         }
     }
@@ -146,25 +145,32 @@ void Scacchiera::cliccato(const QModelIndex& idx)
                 m_model->setData(m_model->index(m_pezzoCorrente.y(),idx.column()>m_pezzoCorrente.x() ? 5:2),QVariant::fromValue(tempTorre));
                 m_model->setData(idxTorre,QVariant());
             }
-            else if((idx.row()==0 || idx.row()==7) && tempPezzo.tipo == Pezzo::Tipo::Pedone){
-                // pedone raggiunge la fine
-                QMessageBox domandaTrasformazione;
-                domandaTrasformazione.setWindowTitle(tr("Trasforma Pedone"));
-                domandaTrasformazione.setText(tr("In cosa vuoi trasformare il pedone?"));
-                QPushButton *reginaBut =domandaTrasformazione.addButton(tr("Regina"),QMessageBox::AcceptRole);
-                QPushButton *torreBut =domandaTrasformazione.addButton(tr("Torre"),QMessageBox::AcceptRole);
-                QPushButton *alfiereBut =domandaTrasformazione.addButton(tr("Alfiere"),QMessageBox::AcceptRole);
-                QPushButton *cavalloBut =domandaTrasformazione.addButton(tr("Cavallo"),QMessageBox::AcceptRole);
-                domandaTrasformazione.exec();
-                if(domandaTrasformazione.clickedButton()==cavalloBut)
-                    tempPezzo.tipo = Pezzo::Tipo::Cavallo;
-                else if(domandaTrasformazione.clickedButton()==torreBut)
-                    tempPezzo.tipo = Pezzo::Tipo::Torre;
-                else if(domandaTrasformazione.clickedButton()==reginaBut)
-                    tempPezzo.tipo = Pezzo::Tipo::Regina;
-                else if(domandaTrasformazione.clickedButton()==alfiereBut)
-                    tempPezzo.tipo = Pezzo::Tipo::Alfiere;
-
+            else if(tempPezzo.tipo == Pezzo::Tipo::Pedone){
+                if((idx.row()==0 || idx.row()==7)){
+                    // pedone raggiunge la fine
+                    QMessageBox domandaTrasformazione;
+                    domandaTrasformazione.setWindowTitle(tr("Trasforma Pedone"));
+                    domandaTrasformazione.setText(tr("In cosa vuoi trasformare il pedone?"));
+                    QPushButton *reginaBut =domandaTrasformazione.addButton(tr("Regina"),QMessageBox::AcceptRole);
+                    QPushButton *torreBut =domandaTrasformazione.addButton(tr("Torre"),QMessageBox::AcceptRole);
+                    QPushButton *alfiereBut =domandaTrasformazione.addButton(tr("Alfiere"),QMessageBox::AcceptRole);
+                    QPushButton *cavalloBut =domandaTrasformazione.addButton(tr("Cavallo"),QMessageBox::AcceptRole);
+                    domandaTrasformazione.exec();
+                    if(domandaTrasformazione.clickedButton()==cavalloBut)
+                        tempPezzo.tipo = Pezzo::Tipo::Cavallo;
+                    else if(domandaTrasformazione.clickedButton()==torreBut)
+                        tempPezzo.tipo = Pezzo::Tipo::Torre;
+                    else if(domandaTrasformazione.clickedButton()==reginaBut)
+                        tempPezzo.tipo = Pezzo::Tipo::Regina;
+                    else if(domandaTrasformazione.clickedButton()==alfiereBut)
+                        tempPezzo.tipo = Pezzo::Tipo::Alfiere;
+                }
+                if(!idx.data().isValid() && m_pezzoCorrente.x()!=idx.column()){
+                    // un pedone si muove in diagonale su una cella vuota solo se mangia "en passant"
+                    Q_ASSERT(m_model->index(m_pezzoCorrente.y(),idx.column()).data().value<Pezzo>().doppioPasso);
+                    m_model->setData(m_model->index(m_pezzoCorrente.y(),idx.column()),QVariant());
+                }
+                tempPezzo.doppioPasso = qAbs(m_pezzoCorrente.y()-idx.row())==2;
             }
             m_model->setData(idx,QVariant::fromValue(tempPezzo));
             m_model->setData(m_model->index(m_pezzoCorrente.y(),m_pezzoCorrente.x()),QVariant());
@@ -180,20 +186,35 @@ void Scacchiera::formattaMossePossibili()
     if(m_pezzoCorrente.y()<0) return;
     QList<QPoint> mosse = mossePossibili(m_pezzoCorrente);
     filtraScacco(mosse,m_pezzoCorrente);
+    const Pezzo pezzoCorrente = indexForPoint(m_pezzoCorrente).data().value<Pezzo>();
+    Q_ASSERT(pezzoCorrente.valido());
     for(QList<QPoint>::const_iterator i = mosse.constBegin();i!=mosse.constEnd();++i){
-        const QModelIndex currIdx=m_model->index(i->y(),i->x());
+        const QModelIndex currIdx=indexForPoint(*i);
+        if(pezzoCorrente.tipo == Pezzo::Tipo::Pedone && !currIdx.data().isValid() && currIdx.column() != m_pezzoCorrente.x()){
+            // un pedone si muove in diagonale su una cella vuota solo se mangia "en passant"
+            m_model->setData(currIdx,CellaMangiabile,StatusCellRole);
+            continue;
+        }
         m_model->setData(currIdx,currIdx.data().isValid() ? CellaMangiabile : CellaVuotaMuovibile,StatusCellRole);
     }
 }
 
-bool Scacchiera::controllaDiagonalePedone(int rig, int colDiag, const Pezzo& pedone) const{
-    if(rig<0 || rig>=8 || colDiag<0 || colDiag>=8 || pedone.tipo!=Pezzo::Tipo::Pedone)
+bool Scacchiera::controllaDiagonalePedone(int rigaPartenza, int rigaArrivo, int colDiag, const Pezzo& pedone) const{
+    if(rigaArrivo<0 || rigaArrivo>=8 || rigaPartenza<0 || rigaPartenza>=8 || colDiag<0 || colDiag>=8 || pedone.tipo!=Pezzo::Tipo::Pedone)
         return false;
-    const QVariant cellaDiagonale = m_model->index(rig,colDiag).data();
-    if(cellaDiagonale.isValid()){ // c'e' un altro pezzo nella cella in diagonale
-        const Pezzo tempPezzo = cellaDiagonale.value<Pezzo>();
+    QVariant cellaMangiabile = m_model->index(rigaArrivo,colDiag).data();
+    if(cellaMangiabile.isValid()){ // c'e' un altro pezzo nella cella in diagonale
+        const Pezzo tempPezzo = cellaMangiabile.value<Pezzo>();
         if(tempPezzo.colore != pedone.colore) // il pezzo e' dell'avversario
             return true;
+    }
+    cellaMangiabile = m_model->index(rigaPartenza,colDiag).data();
+    if(cellaMangiabile.isValid()){
+        const Pezzo tempPezzo = cellaMangiabile.value<Pezzo>();
+        if(tempPezzo.doppioPasso && tempPezzo.tipo == Pezzo::Tipo::Pedone && tempPezzo.colore != pedone.colore){
+            //en passant
+            return true;
+        }
     }
     return false;
 }
@@ -260,9 +281,9 @@ QList<QPoint> Scacchiera::mossePossibili(const QPoint &pedina) const
     switch(pezzoCorrente.tipo){
     case Pezzo::Tipo::Pedone:{
         int rigaAzione = pedina.y() + (pezzoCorrente.colore==Pezzo::Colore::Bianco ? -1:1);
-        if(controllaDiagonalePedone(rigaAzione,pedina.x()+1,pezzoCorrente))
+        if(controllaDiagonalePedone(pedina.y(),rigaAzione,pedina.x()+1,pezzoCorrente))
             result.append(QPoint(pedina.x()+1,rigaAzione));
-        if(controllaDiagonalePedone(rigaAzione,pedina.x()-1,pezzoCorrente))
+        if(controllaDiagonalePedone(pedina.y(),rigaAzione,pedina.x()-1,pezzoCorrente))
             result.append(QPoint(pedina.x()-1,rigaAzione));
         if(!m_model->index(rigaAzione,pedina.x()).data().isValid()){ // la cella di fronte e' libera
             result.append(QPoint(pedina.x(),rigaAzione));

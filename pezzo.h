@@ -22,13 +22,11 @@ public:
     Tipo tipo;
     Colore colore;
     bool primaMossa;
+    bool doppioPasso;
     Pezzo();
     Pezzo(Tipo tp, Colore cl);
     Pezzo(const Pezzo&)=default;
-    bool operator==(const Pezzo& other) const;
+    bool valido() const;
 };
 Q_DECLARE_METATYPE(Pezzo)
-uint qHash(Pezzo::Tipo key, uint seed = 0);
-uint qHash(Pezzo::Colore key, uint seed = 0);
-QDebug operator<<(QDebug stream, const Pezzo &pezzo);
 #endif // PEZZO_H
