@@ -19,10 +19,11 @@ private:
     QTableView* m_tableView;
     QStandardItemModel* m_model;
     QLabel* m_turnoLabel;
-    bool m_turnoBianco;
+    Pezzo::Colore m_turnoDi;
     Q_SLOT void cliccato(const QModelIndex &idx);
     QPoint m_pezzoCorrente;
     void formattaMossePossibili();
+    void rimuoviTuttiStati(Pezzo::Colore colr,bool rimuoviScacco);
     void rimuoviTuttiStati(bool rimuoviScacco);
     void cambiaTurno();
     QPoint posizioneRe(Pezzo::Colore colr) const;

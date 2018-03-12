@@ -4,6 +4,7 @@
 enum {
     StatusCellRole = Qt::UserRole
     , ScaccoRole
+    , DoppioPassoRole
 };
 enum CellStatus{
     Vuoto

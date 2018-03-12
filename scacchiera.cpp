@@ -12,7 +12,7 @@
 #include <QMessageBox>
 Scacchiera::Scacchiera(QWidget *parent)
     : QWidget(parent)
-    , m_turnoBianco(true)
+    , m_turnoDi(Pezzo::Colore::Bianco)
     , m_pezzoCorrente(-1,-1)
 {
     m_turnoLabel = new QLabel(this);
@@ -54,8 +54,8 @@ Scacchiera::Scacchiera(QWidget *parent)
     startGame();
 }
 void Scacchiera::startGame(){
-    m_turnoBianco=true;
-    rimuoviTuttiStati(true);
+    m_turnoDi = Pezzo::Colore::Bianco;
+    rimuoviTuttiStati(Pezzo::Colore::Nessuno,true);
     for(int i=0;i<8;++i){
         for(int j=0;j<8;++j){
             m_model->setData(m_model->index(i,j),QVariant());
@@ -104,7 +104,7 @@ void Scacchiera::startGame(){
 void Scacchiera::retranslateUi()
 {
     setWindowTitle(tr("Scacchi"));
-    m_turnoLabel->setText(tr("Turno di %1").arg(m_turnoBianco ? QChar(0x2654) : QChar(0x265A)));
+    m_turnoLabel->setText(tr("Turno di %1").arg(m_turnoDi == Pezzo::Colore::Bianco ? QChar(0x2654) : QChar(0x265A)));
 }
 
 
@@ -117,7 +117,7 @@ void Scacchiera::cliccato(const QModelIndex& idx)
         const QVariant tempData = idx.data();
         if(tempData.isValid()){ //la cella contiene un pezzo
             Pezzo tempPezzo = tempData.value<Pezzo>();
-            if((tempPezzo.colore==Pezzo::Colore::Bianco)==m_turnoBianco){ //il pezzo selezionato e' del giocatore che ha il turno
+            if(tempPezzo.colore==m_turnoDi){ //il pezzo selezionato e' del giocatore che ha il turno
                 m_pezzoCorrente.setY(idx.row());
                 m_pezzoCorrente.setX(idx.column());
                 m_model->setData(idx,PezzoSelezionato,StatusCellRole);
@@ -167,10 +167,11 @@ void Scacchiera::cliccato(const QModelIndex& idx)
                 }
                 if(!idx.data().isValid() && m_pezzoCorrente.x()!=idx.column()){
                     // un pedone si muove in diagonale su una cella vuota solo se mangia "en passant"
-                    Q_ASSERT(m_model->index(m_pezzoCorrente.y(),idx.column()).data().value<Pezzo>().doppioPasso);
+                    Q_ASSERT(m_model->index(m_pezzoCorrente.y(),idx.column()).data(DoppioPassoRole).toBool());
                     m_model->setData(m_model->index(m_pezzoCorrente.y(),idx.column()),QVariant());
                 }
-                tempPezzo.doppioPasso = qAbs(m_pezzoCorrente.y()-idx.row())==2;
+                if(qAbs(m_pezzoCorrente.y()-idx.row())==2)
+                    m_model->setData(idx,true,DoppioPassoRole);
             }
             m_model->setData(idx,QVariant::fromValue(tempPezzo));
             m_model->setData(m_model->index(m_pezzoCorrente.y(),m_pezzoCorrente.x()),QVariant());
@@ -211,7 +212,8 @@ bool Scacchiera::controllaDiagonalePedone(int rigaPartenza, int rigaArrivo, int 
     cellaMangiabile = m_model->index(rigaPartenza,colDiag).data();
     if(cellaMangiabile.isValid()){
         const Pezzo tempPezzo = cellaMangiabile.value<Pezzo>();
-        if(tempPezzo.doppioPasso && tempPezzo.tipo == Pezzo::Tipo::Pedone && tempPezzo.colore != pedone.colore){
+        Q_ASSERT(tempPezzo.tipo == Pezzo::Tipo::Pedone);
+        if(m_model->index(rigaPartenza,colDiag).data(DoppioPassoRole).toBool() && tempPezzo.colore != pedone.colore){
             //en passant
             return true;
         }
@@ -379,6 +381,19 @@ QModelIndex Scacchiera::indexForPoint(const QPoint &pnt) const{
     return m_model->index(pnt.y(),pnt.x());
 }
 
+void Scacchiera::rimuoviTuttiStati(Pezzo::Colore colr, bool rimuoviScacco)
+{
+    for(int i=0;i<8;++i){
+        for(int j=0;j<8;++j){
+            m_model->setData(m_model->index(i,j),QVariant(),StatusCellRole);
+            const QVariant pezzoData = m_model->index(i,j).data();
+            if(pezzoData.isValid() && pezzoData.value<Pezzo>().colore!=colr)
+                m_model->setData(m_model->index(i,j),QVariant(),DoppioPassoRole);
+            if(rimuoviScacco)
+                m_model->setData(m_model->index(i,j),QVariant(),ScaccoRole);
+        }
+    }
+}
 void Scacchiera::rimuoviTuttiStati(bool rimuoviScacco)
 {
     for(int i=0;i<8;++i){
@@ -392,23 +407,23 @@ void Scacchiera::rimuoviTuttiStati(bool rimuoviScacco)
 
 void Scacchiera::cambiaTurno()
 {
-    rimuoviTuttiStati(true);
+    rimuoviTuttiStati(m_turnoDi, true);
     m_pezzoCorrente.setX(-1);
     m_pezzoCorrente.setY(-1);
-    m_turnoBianco = !m_turnoBianco;
-    const QPoint posRe = posizioneRe(m_turnoBianco ? Pezzo::Colore::Bianco : Pezzo::Colore::Nero);
-    const bool isScacco = scacco(m_turnoBianco ? Pezzo::Colore::Bianco : Pezzo::Colore::Nero,posRe);
+    m_turnoDi = (m_turnoDi == Pezzo::Colore::Bianco ? Pezzo::Colore::Nero : Pezzo::Colore::Bianco);
+    const QPoint posRe = posizioneRe(m_turnoDi);
+    const bool isScacco = scacco(m_turnoDi,posRe);
     if(isScacco)
         m_model->setData(indexForPoint(posRe),CellaScacco,ScaccoRole);
-    const bool isStallo = stallo(m_turnoBianco ? Pezzo::Colore::Bianco : Pezzo::Colore::Nero);
+    const bool isStallo = stallo(m_turnoDi);
     if(isStallo){
         if(isScacco)
-            QMessageBox::information(this,tr("Scacco Matto"),tr("Il Giocatore %1 Vince!").arg(m_turnoBianco ? tr("Nero"):tr("Bianco")));
+            QMessageBox::information(this,tr("Scacco Matto"),tr("Il Giocatore %1 Vince!").arg(m_turnoDi == Pezzo::Colore::Bianco ? tr("Nero"):tr("Bianco")));
         else
             QMessageBox::information(this,tr("Stallo"),tr("Pareggio!"));
         return startGame();
     }
-    m_turnoLabel->setText(tr("Turno di %1").arg(m_turnoBianco ? QChar(0x2654) : QChar(0x265A)));
+    m_turnoLabel->setText(tr("Turno di %1").arg(m_turnoDi == Pezzo::Colore::Bianco ? QChar(0x2654) : QChar(0x265A)));
 
 }
 

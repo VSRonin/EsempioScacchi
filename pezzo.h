@@ -22,7 +22,6 @@ public:
     Tipo tipo;
     Colore colore;
     bool primaMossa;
-    bool doppioPasso;
     Pezzo();
     Pezzo(Tipo tp, Colore cl);
     Pezzo(const Pezzo&)=default;

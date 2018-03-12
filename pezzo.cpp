@@ -8,7 +8,6 @@ Pezzo::Pezzo(Pezzo::Tipo tp, Pezzo::Colore cl)
     : tipo(tp)
     , colore(cl)
     , primaMossa(true)
-    , doppioPasso(false)
 {}
 
 bool Pezzo::valido() const
