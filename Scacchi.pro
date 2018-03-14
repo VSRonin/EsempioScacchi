@@ -8,10 +8,12 @@ SOURCES += \
         main.cpp \
     scacchiera.cpp \
     pezzodelegate.cpp \
-    pezzo.cpp
+    pezzo.cpp \
+    oggettoscacchi.cpp
 
 HEADERS += \
     pezzo.h \
     scacchiera.h \
     pezzodelegate.h \
-    scacchiglobal.h
+    scacchiglobal.h \
+    oggettoscacchi.h

@@ -4,8 +4,8 @@
 #include <QWidget>
 #include <QList>
 #include "pezzo.h"
+class OggettoScacchi;
 class QTableView;
-class QStandardItemModel;
 class QLabel;
 class Scacchiera : public QWidget
 {
@@ -13,28 +13,15 @@ class Scacchiera : public QWidget
     Q_DISABLE_COPY(Scacchiera)
 public:
     explicit Scacchiera(QWidget *parent = Q_NULLPTR);
-    Q_SLOT void startGame();
-    Q_SLOT void retranslateUi();
 private:
     QTableView* m_tableView;
-    QStandardItemModel* m_model;
+    OggettoScacchi* m_scacchi;
     QLabel* m_turnoLabel;
-    Pezzo::Colore m_turnoDi;
     Q_SLOT void cliccato(const QModelIndex &idx);
-    QPoint m_pezzoCorrente;
-    void formattaMossePossibili();
-    void rimuoviTuttiStati(Pezzo::Colore colr,bool rimuoviScacco);
-    void rimuoviTuttiStati(bool rimuoviScacco);
-    void cambiaTurno();
-    QPoint posizioneRe(Pezzo::Colore colr) const;
-    bool scacco(Pezzo::Colore colr, const QPoint& posRe) const;
-    bool scacco(Pezzo::Colore colr) const;
-    bool stallo(Pezzo::Colore colr) const;
-    bool controllaDiagonalePedone(int rigaPartenza, int rigaArrivo, int colDiag, const Pezzo& pedone) const;
-    bool controllaArrocco(Pezzo::Colore colr, bool aSinistra) const;
-    void filtraScacco(QList<QPoint>& mosse,const QPoint& pedina) const;
-    QList<QPoint> mossePossibili(const QPoint& pedina) const;
-    QModelIndex indexForPoint(const QPoint& pnt) const;
+    Q_SLOT void segnalaScaccoMatto(Pezzo::Colore vincitore);
+    Q_SLOT void segnalaStallo();
+    Q_SLOT void turnoDi(Pezzo::Colore giocatore);
+    Q_SLOT void pedoneDaTrasformare();
 };
 
 
