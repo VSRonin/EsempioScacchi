@@ -1,26 +1,14 @@
 #include "oggettoscacchi.h"
 #include "pezzo.h"
-#include <QStandardItemModel>
-#include <QStandardItem>
 #include "scacchiglobal.h"
+#include "scacchimodel.h"
 QAbstractItemModel *OggettoScacchi::model() const {return m_model;}
 OggettoScacchi::OggettoScacchi(QObject *parent)
     : QObject(parent)
     , m_turnoDi(Pezzo::Colore::Bianco)
     , m_pezzoCorrente(-1,-1)
 {
-    m_model=new QStandardItemModel(this);
-    m_model->insertRows(0,8);
-    m_model->insertColumns(0,8);
-    for(int i=0;i<8;++i){
-        m_model->setHeaderData(i,Qt::Horizontal,QChar('A'+i));
-        m_model->setHeaderData(i,Qt::Vertical,i+1);
-        for(int j=0;j<8;++j){
-            m_model->setData(m_model->index(i,j),Qt::AlignCenter,Qt::TextAlignmentRole);
-            m_model->setData(m_model->index(i,j), QBrush(j%2==i%2 ? Qt::white : Qt::lightGray),Qt::BackgroundRole);
-            m_model->item(i,j)->setFlags(Qt::ItemIsEnabled);
-        }
-    }
+    m_model= new ScacchiModel(this);
 }
 void OggettoScacchi::startGame(){
     m_turnoDi = Pezzo::Colore::Bianco;

@@ -9,11 +9,13 @@ SOURCES += \
     scacchiera.cpp \
     pezzodelegate.cpp \
     pezzo.cpp \
-    oggettoscacchi.cpp
+    oggettoscacchi.cpp \
+    scacchimodel.cpp
 
 HEADERS += \
     pezzo.h \
     scacchiera.h \
     pezzodelegate.h \
     scacchiglobal.h \
-    oggettoscacchi.h
+    oggettoscacchi.h \
+    scacchimodel.h

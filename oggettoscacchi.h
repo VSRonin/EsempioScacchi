@@ -32,7 +32,7 @@ public:
 private:
     bool muovi(const QModelIndex& toIdx, Pezzo::Tipo typPedone);
     QModelIndex m_pedoneDaTrasformare;
-    QStandardItemModel* m_model;
+    QAbstractItemModel* m_model;
     Pezzo::Colore m_turnoDi;
     QPoint m_pezzoCorrente;
     void formattaMossePossibili();
