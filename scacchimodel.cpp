@@ -1,5 +1,4 @@
 #include "scacchimodel.h"
-#include <QAbstractItemModel>
 #include <QVector>
 #include <QBrush>
 ScacchiModel::ScacchiModel(QObject *parent)
@@ -73,4 +72,17 @@ QVariant ScacchiModel::headerData(int section, Qt::Orientation orientation, int 
     if(section<0 ||  section>=8 || role!=Qt::EditRole)
         return QVariant();
     return orientation==Qt::Horizontal ? QVariant::fromValue(QChar('A'+section)) : QVariant::fromValue(section+1);
+}
+
+void ScacchiModel::clone(ScacchiModel *destination) const
+{
+    if(!destination)
+        return;
+    for(int i=0;i<m_data.size();++i){
+        for(int j=0;j<m_data[i].size();++j){
+            for(int k=0;k<m_data[i][j].size();++k){
+                destination->m_data[i][j][k]=m_data[i][j][k];
+            }
+        }
+    }
 }

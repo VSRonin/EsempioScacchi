@@ -3,7 +3,6 @@
 
 #include <QAbstractItemModel>
 #include <array>
-#include <QString>
 #include <QVariant>
 #include "scacchiglobal.h"
 class ScacchiModel : public QAbstractItemModel
@@ -32,9 +31,9 @@ public:
         Q_UNUSED(value)
         return false;
     }
+    virtual void clone(ScacchiModel* destination) const;
 private:
     std::array<std::array<std::array<QVariant,4>,8>,8> m_data;
-    std::array<std::array<QString,8>,2> m_headData;
 };
 
 #endif // SCACCHIMODEL_H
