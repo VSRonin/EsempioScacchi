@@ -190,7 +190,7 @@ bool OggettoScacchi::trasformaPedone(Pezzo::Tipo typ)
 void OggettoScacchi::formattaMossePossibili()
 {
     if(m_pezzoCorrente.y()<0) return;
-    QList<QPoint> mosse = mossePossibili(m_pezzoCorrente);
+    QList<QPoint> mosse = mossePossibili(m_pezzoCorrente,true);
     filtraScacco(mosse,m_pezzoCorrente);
     const Pezzo pezzoCorrente = indexForPoint(m_pezzoCorrente).data().value<Pezzo>();
     Q_ASSERT(pezzoCorrente.valido());
@@ -282,7 +282,7 @@ void OggettoScacchi::filtraScacco(QList<QPoint> &mosse,const QPoint &pedina) con
     }
 }
 
-QList<QPoint> OggettoScacchi::mossePossibili(const QPoint &pedina) const
+QList<QPoint> OggettoScacchi::mossePossibili(const QPoint &pedina, bool cntrlArrocco) const
 {
     QList<QPoint> result;
     if(pedina.x()>=8 || pedina.y() >=8 || pedina.x()<0 || pedina.y() <0)
@@ -379,10 +379,12 @@ QList<QPoint> OggettoScacchi::mossePossibili(const QPoint &pedina) const
                 result.append(cursore);
             }
         }
-        if(controllaArrocco(pezzoCorrente.colore,true))
-            result.append(QPoint(1,pedina.y()));
-        if(controllaArrocco(pezzoCorrente.colore,false))
-            result.append(QPoint(6,pedina.y()));
+        if(cntrlArrocco){
+            if(controllaArrocco(pezzoCorrente.colore,true))
+                result.append(QPoint(1,pedina.y()));
+            if(controllaArrocco(pezzoCorrente.colore,false))
+                result.append(QPoint(6,pedina.y()));
+        }
     }break;
     }
     return result;

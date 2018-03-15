@@ -46,7 +46,7 @@ private:
     bool controllaDiagonalePedone(int rigaPartenza, int rigaArrivo, int colDiag, const Pezzo& pedone) const;
     bool controllaArrocco(Pezzo::Colore colr, bool aSinistra) const;
     void filtraScacco(QList<QPoint>& mosse,const QPoint& pedina) const;
-    QList<QPoint> mossePossibili(const QPoint& pedina) const;
+    QList<QPoint> mossePossibili(const QPoint& pedina, bool cntrlArrocco=false) const;
     QModelIndex indexForPoint(const QPoint& pnt) const;
 };
 #endif // OGGETTOSCACCHI_H
