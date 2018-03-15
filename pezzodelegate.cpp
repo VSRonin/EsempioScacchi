@@ -64,4 +64,10 @@ void PezzoDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option,
     style->drawControl(QStyle::CE_ItemViewItem, &opt, painter, widget);
 }
 
+QSize PezzoDelegate::sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const
+{
+    Q_UNUSED(index)
+    return QSize(qMin(option.rect.height(),option.rect.width()),qMin(option.rect.height(),option.rect.width()));
+}
+
 

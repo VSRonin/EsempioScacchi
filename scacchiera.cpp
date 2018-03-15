@@ -9,6 +9,7 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QMessageBox>
+#include <QHBoxLayout>
 Scacchiera::Scacchiera(QWidget *parent)
     : QWidget(parent)
 {
@@ -30,16 +31,31 @@ Scacchiera::Scacchiera(QWidget *parent)
         m_tableView->horizontalHeader()->resizeSection(i,50);
         m_tableView->verticalHeader()->resizeSection(i,50);
     }
+    m_redoButton=new QPushButton(tr("Redo"),this);
+    m_redoButton->setEnabled(false);
+    m_undoButton=new QPushButton(tr("Undo"),this);
+    m_undoButton->setEnabled(false);
+    QHBoxLayout* headLay=new QHBoxLayout;
+    headLay->addWidget(m_turnoLabel);
+    headLay->addStretch();
+    headLay->addWidget(m_undoButton);
+    headLay->addWidget(m_redoButton);
     QGridLayout* mainlay=new QGridLayout(this);
     mainlay->addWidget(m_tableView,2,1);
-    mainlay->addWidget(m_turnoLabel,1,1);
+    mainlay->addLayout(headLay,1,1);
     mainlay->addItem(new QSpacerItem(0,0,QSizePolicy::Expanding,QSizePolicy::Preferred),1,0);
     mainlay->addItem(new QSpacerItem(0,0,QSizePolicy::Expanding,QSizePolicy::Preferred),1,2);
     mainlay->addItem(new QSpacerItem(0,0,QSizePolicy::Preferred,QSizePolicy::Expanding),0,1);
     mainlay->addItem(new QSpacerItem(0,0,QSizePolicy::Preferred,QSizePolicy::Expanding),3,1);
     connect(m_tableView,&QTableView::clicked,this,&Scacchiera::cliccato);
     connect(m_scacchi,&OggettoScacchi::scaccoMatto,this,&Scacchiera::segnalaScaccoMatto);
+    connect(m_scacchi,&OggettoScacchi::stallo,this,&Scacchiera::segnalaStallo);
     connect(m_scacchi,&OggettoScacchi::turnoDi,this,&Scacchiera::turnoDi);
+    connect(m_scacchi,&OggettoScacchi::undoEnabled,m_undoButton,&QPushButton::setEnabled);
+    connect(m_scacchi,&OggettoScacchi::redoEnabled,m_redoButton,&QPushButton::setEnabled);
+    connect(m_scacchi,&OggettoScacchi::richiediTrasformazionePedone,this,&Scacchiera::pedoneDaTrasformare);
+    connect(m_redoButton,&QPushButton::clicked,m_scacchi,&OggettoScacchi::redoMossa);
+    connect(m_undoButton,&QPushButton::clicked,m_scacchi,&OggettoScacchi::undoMossa);
     setWindowTitle(tr("Scacchi"));
     m_scacchi->startGame();
 }

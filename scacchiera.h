@@ -7,6 +7,7 @@
 class OggettoScacchi;
 class QTableView;
 class QLabel;
+class QPushButton;
 class Scacchiera : public QWidget
 {
     Q_OBJECT
@@ -17,6 +18,8 @@ private:
     QTableView* m_tableView;
     OggettoScacchi* m_scacchi;
     QLabel* m_turnoLabel;
+    QPushButton* m_undoButton;
+    QPushButton* m_redoButton;
     Q_SLOT void cliccato(const QModelIndex &idx);
     Q_SLOT void segnalaScaccoMatto(Pezzo::Colore vincitore);
     Q_SLOT void segnalaStallo();

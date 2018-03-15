@@ -3,10 +3,12 @@
 #include "scacchiglobal.h"
 #include "scacchimodel.h"
 QAbstractItemModel *OggettoScacchi::model() const {return m_model;}
+const QStack<Mossa> &OggettoScacchi::registroMosse() const {return m_registroMosse;}
 OggettoScacchi::OggettoScacchi(QObject *parent)
     : QObject(parent)
     , m_turnoDi(Pezzo::Colore::Bianco)
     , m_pezzoCorrente(-1,-1)
+    , m_pedoneDaTrasformare(-1,-1)
 {
     m_model= new ScacchiModel(this);
 }
@@ -71,6 +73,12 @@ bool OggettoScacchi::muovi(const QPoint &fromPt, const QPoint &toPt){
         return muovi(toPt);
     return false;
 }
+bool OggettoScacchi::muovi(const QPoint &fromPt, const QPoint &toPt, Pezzo::Tipo typPedone, bool clearRedo)
+{
+    if(usaPezzo(fromPt))
+        return muovi(indexForPoint(toPt),typPedone,clearRedo);
+    return false;
+}
 
 bool OggettoScacchi::usaPezzo(const QPoint &fromPt){return usaPezzo(indexForPoint(fromPt));}
 
@@ -80,7 +88,7 @@ bool OggettoScacchi::usaPezzo(const QModelIndex& fromIdx)
 {
     if(!fromIdx.isValid())
         return false;
-    if(m_pedoneDaTrasformare.isValid())
+    if(m_pedoneDaTrasformare.y()>=0)
         return false;
     Q_ASSERT(fromIdx.model()==m_model);
     if(m_pezzoCorrente.y()<0){ //nessun pezzo selezionato
@@ -107,13 +115,13 @@ bool OggettoScacchi::usaPezzo(const QModelIndex& fromIdx)
 
 bool OggettoScacchi::muovi(const QModelIndex &toIdx){return muovi(toIdx,Pezzo::Tipo::Nessuno);}
 
-bool OggettoScacchi::muovi(const QModelIndex &toIdx, Pezzo::Tipo typPedone)
+bool OggettoScacchi::muovi(const QModelIndex &toIdx, Pezzo::Tipo typPedone, bool clearRedo)
 {
     if(!toIdx.isValid())
         return false;
-    if(m_pedoneDaTrasformare.isValid() && (typPedone==Pezzo::Tipo::Nessuno || typPedone==Pezzo::Tipo::Re ||typPedone==Pezzo::Tipo::Pedone))
+    if(m_pedoneDaTrasformare.y()>=0 && (typPedone==Pezzo::Tipo::Nessuno || typPedone==Pezzo::Tipo::Re ||typPedone==Pezzo::Tipo::Pedone))
         return false;
-    if(m_pedoneDaTrasformare.isValid() && toIdx!=m_pedoneDaTrasformare)
+    if(m_pedoneDaTrasformare.y()>=0 && toIdx!=indexForPoint(m_pedoneDaTrasformare))
         return false;
     Q_ASSERT(toIdx.model()==m_model);
     if(m_pezzoCorrente.y()<0) //nessun pezzo selezionato
@@ -123,7 +131,9 @@ bool OggettoScacchi::muovi(const QModelIndex &toIdx, Pezzo::Tipo typPedone)
     switch(toIdx.data(StatusCellRole).toInt()){
     case CellaMangiabile:
     case CellaVuotaMuovibile:{
+        Mossa tempMossa;
         Pezzo tempPezzo = m_model->index(m_pezzoCorrente.y(),m_pezzoCorrente.x()).data().value<Pezzo>();
+        tempMossa.primaMossa = tempPezzo.primaMossa;
         tempPezzo.primaMossa = false;
         if(tempPezzo.tipo == Pezzo::Tipo::Re && qAbs(m_pezzoCorrente.x()-toIdx.column())>1){
             //Arrocco
@@ -135,31 +145,55 @@ bool OggettoScacchi::muovi(const QModelIndex &toIdx, Pezzo::Tipo typPedone)
             m_model->setData(idxTorre,QVariant());
         }
         else if(tempPezzo.tipo == Pezzo::Tipo::Pedone){
-            if(m_pedoneDaTrasformare.isValid()){
+            if(m_pedoneDaTrasformare.y()>=0){
                 tempPezzo.tipo = typPedone;
+                tempMossa.pedoneTrasformato=typPedone;
             }
             else if((toIdx.row()==0 || toIdx.row()==7)){
                 // pedone raggiunge la fine
-                m_pedoneDaTrasformare = toIdx;
-                richiediTrasformazionePedone();
-                return false;
+                m_pedoneDaTrasformare = pointForIndex(toIdx);
+                if(typPedone!=Pezzo::Tipo::Nessuno && typPedone!=Pezzo::Tipo::Re && typPedone!=Pezzo::Tipo::Pedone){
+                    tempPezzo.tipo = typPedone;
+                    tempMossa.pedoneTrasformato=typPedone;
+                }
+                else{
+                    richiediTrasformazionePedone();
+                    return false;
+                }
             }
-            m_pedoneDaTrasformare = QModelIndex();
+            m_pedoneDaTrasformare = QPoint(-1,-1);
             if(!toIdx.data().isValid() && m_pezzoCorrente.x()!=toIdx.column()){
                 // un pedone si muove in diagonale su una cella vuota solo se mangia "en passant"
                 const QModelIndex enPassantIdx = m_model->index(m_pezzoCorrente.y(),toIdx.column());
                 Q_ASSERT(enPassantIdx.data(DoppioPassoRole).toBool());
                 Q_ASSERT(enPassantIdx.data().isValid());
-                mangiato(enPassantIdx.data().value<Pezzo>());
+                const Pezzo pezzoMangiato =enPassantIdx.data().value<Pezzo>();
+                tempMossa.mangiato= pezzoMangiato;
+                tempMossa.mangiatoEnPassant = true;
+                mangiato(pezzoMangiato);
                 m_model->setData(enPassantIdx,QVariant());
             }
             if(qAbs(m_pezzoCorrente.y()-toIdx.row())==2)
                 m_model->setData(toIdx,true,DoppioPassoRole);
         }
-        if(toIdx.data().isValid())
-            mangiato(toIdx.data().value<Pezzo>());
+        if(toIdx.data().isValid()){
+            const Pezzo pezzoMangiato =toIdx.data().value<Pezzo>();
+            tempMossa.mangiato= pezzoMangiato;
+            mangiato(pezzoMangiato);
+        }
+        tempMossa.muoviDa = m_pezzoCorrente;
+        tempMossa.muoviA = pointForIndex(toIdx);
+        if(clearRedo){
+            m_registroMosse.push(tempMossa);
+            if(m_registroMosse.size()==1)
+                undoEnabled(true);
+            if(!m_redoStack.isEmpty()){
+                m_redoStack.clear();
+                redoEnabled(false);
+            }
+        }
         m_model->setData(toIdx,QVariant::fromValue(tempPezzo));
-        m_model->setData(m_model->index(m_pezzoCorrente.y(),m_pezzoCorrente.x()),QVariant());
+        m_model->setData(indexForPoint(m_pezzoCorrente),QVariant());
         cambiaTurno();
         return true;
     }
@@ -168,11 +202,63 @@ bool OggettoScacchi::muovi(const QModelIndex &toIdx, Pezzo::Tipo typPedone)
     return  false;
 }
 
+
+
 bool OggettoScacchi::trasformaPedone(Pezzo::Tipo typ)
 {
-    if(!m_pedoneDaTrasformare.isValid())
+    if(m_pedoneDaTrasformare.y()<0)
         return false;
-    return muovi(m_pedoneDaTrasformare,typ);
+    return muovi(indexForPoint(m_pedoneDaTrasformare),typ);
+}
+
+bool OggettoScacchi::undoMossa()
+{
+    if(m_registroMosse.isEmpty())
+        return false;
+    if(m_pezzoCorrente.y()>=0)
+        usaPezzo(m_pezzoCorrente);
+    const Mossa tempMossa = m_registroMosse.pop();
+    Pezzo pezzoMosso = indexForPoint(tempMossa.muoviA).data().value<Pezzo>();
+    pezzoMosso.primaMossa=tempMossa.primaMossa;
+    if(tempMossa.pedoneTrasformato != Pezzo::Tipo::Nessuno){
+        Q_ASSERT(pezzoMosso.tipo==Pezzo::Tipo::Regina || pezzoMosso.tipo==Pezzo::Tipo::Torre || pezzoMosso.tipo==Pezzo::Tipo::Alfiere || pezzoMosso.tipo==Pezzo::Tipo::Cavallo);
+        pezzoMosso.tipo=Pezzo::Tipo::Pedone;
+    }
+    m_model->setData(indexForPoint(tempMossa.muoviDa),QVariant::fromValue(pezzoMosso));
+    if(tempMossa.mangiatoEnPassant){
+        Q_ASSERT(tempMossa.mangiato.valido());
+        m_model->setData(m_model->index(tempMossa.muoviDa.y(),tempMossa.muoviA.x()),QVariant::fromValue(tempMossa.mangiato));
+        m_model->setData(indexForPoint(tempMossa.muoviA),QVariant());
+    }
+    else if(tempMossa.mangiato.valido()){
+        m_model->setData(indexForPoint(tempMossa.muoviA),QVariant::fromValue(tempMossa.mangiato));
+    }
+    else{
+         m_model->setData(indexForPoint(tempMossa.muoviA),QVariant());
+    }
+    m_redoStack.push(tempMossa);
+    if(m_redoStack.size()==1)
+        redoEnabled(true);
+    if(m_registroMosse.isEmpty())
+        undoEnabled(false);
+    cambiaTurno();
+    return true;
+}
+
+bool OggettoScacchi::redoMossa()
+{
+    if(m_redoStack.isEmpty())
+        return false;
+    if(m_pezzoCorrente.y()>=0)
+        usaPezzo(m_pezzoCorrente);
+    const Mossa tempMossa = m_redoStack.pop();
+    muovi(tempMossa.muoviDa,tempMossa.muoviA,tempMossa.pedoneTrasformato,false);
+    m_registroMosse.push(tempMossa);
+    if(m_registroMosse.size()==1)
+        undoEnabled(true);
+    if(m_redoStack.isEmpty())
+        redoEnabled(false);
+    return true;
 }
 
 void OggettoScacchi::formattaMossePossibili()
@@ -382,6 +468,13 @@ QModelIndex OggettoScacchi::indexForPoint(const QPoint &pnt) const{
     return m_model->index(pnt.y(),pnt.x());
 }
 
+QPoint OggettoScacchi::pointForIndex(const QModelIndex &idx) const
+{
+    if(!idx.isValid())
+        return QPoint();
+    return QPoint(idx.column(),idx.row());
+}
+
 void OggettoScacchi::rimuoviTuttiStati(Pezzo::Colore colr, bool rimuoviScacco)
 {
     for(int i=0;i<8;++i){
@@ -416,8 +509,8 @@ void OggettoScacchi::cambiaTurno()
     const bool isScacco = scacco(m_turnoDi,posRe);
     if(isScacco)
         m_model->setData(indexForPoint(posRe),CellaScacco,ScaccoRole);
-    const bool isStallo = stallo(m_turnoDi);
-    if(isStallo){
+    const bool isstallo = isStallo(m_turnoDi);
+    if(isstallo){
         if(isScacco)
             scaccoMatto(m_turnoDi == Pezzo::Colore::Bianco ? Pezzo::Colore::Nero : Pezzo::Colore::Bianco);
         else
@@ -463,7 +556,7 @@ bool OggettoScacchi::scacco(Pezzo::Colore colr) const
     return scacco(colr,posizioneRe(colr));
 }
 
-bool OggettoScacchi::stallo(Pezzo::Colore colr) const
+bool OggettoScacchi::isStallo(Pezzo::Colore colr) const
 {
     for(int i=0;i<8;++i){
         for(int j=0;j<8;++j){
