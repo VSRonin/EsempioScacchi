@@ -7,17 +7,7 @@
 #include "pezzo.h"
 class QStandardItemModel;
 class QAbstractItemModel;
-struct Mossa{
-    Mossa(const Mossa& other) = default;
-    Mossa& operator=(const Mossa& other) = default;
-    Mossa() : mangiatoEnPassant(false), primaMossa(false),pedoneTrasformato(Pezzo::Tipo::Nessuno){}
-    QPoint muoviDa;
-    QPoint muoviA;
-    Pezzo mangiato;
-    bool mangiatoEnPassant;
-    bool primaMossa;
-    Pezzo::Tipo pedoneTrasformato;
-};
+class Mossa;
 class OggettoScacchi : public QObject
 {
     Q_OBJECT
@@ -35,6 +25,8 @@ public:
     Q_SLOT bool trasformaPedone(Pezzo::Tipo typ);
     Q_SLOT bool undoMossa();
     Q_SLOT bool redoMossa();
+    Q_SLOT bool muovi(const Mossa& mossa);
+
     Q_SIGNAL void mangiato(const Pezzo& pedina);
     Q_SIGNAL void scaccoMatto(Pezzo::Colore vincitore);
     Q_SIGNAL void stallo();
@@ -46,6 +38,7 @@ public:
     QAbstractItemModel* model() const;
     const QStack<Mossa>& registroMosse() const;
 private:
+    bool muovi(const Mossa& mossa, bool salvaRedo);
     bool muovi(const QModelIndex& toIdx, Pezzo::Tipo typPedone, bool clearRedo = true);
     bool muovi(const QPoint& fromPt,const QPoint& toPt, Pezzo::Tipo typPedone, bool clearRedo = true);
     QPoint m_pedoneDaTrasformare;

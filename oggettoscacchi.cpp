@@ -141,6 +141,7 @@ bool OggettoScacchi::muovi(const QModelIndex &toIdx, Pezzo::Tipo typPedone, bool
             Pezzo tempTorre = idxTorre.data().value<Pezzo>();
             Q_ASSERT(tempTorre.tipo == Pezzo::Tipo::Torre && tempTorre.colore == tempPezzo.colore);
             tempTorre.primaMossa = false;
+            tempMossa.arrocco = true;
             m_model->setData(m_model->index(m_pezzoCorrente.y(),toIdx.column()>m_pezzoCorrente.x() ? 5:2),QVariant::fromValue(tempTorre));
             m_model->setData(idxTorre,QVariant());
         }
@@ -225,16 +226,26 @@ bool OggettoScacchi::undoMossa()
         pezzoMosso.tipo=Pezzo::Tipo::Pedone;
     }
     m_model->setData(indexForPoint(tempMossa.muoviDa),QVariant::fromValue(pezzoMosso));
-    if(tempMossa.mangiatoEnPassant){
+    m_model->setData(indexForPoint(tempMossa.muoviA),QVariant());
+    if(tempMossa.arrocco){
+        Q_ASSERT(!tempMossa.mangiato.valido());
+        Q_ASSERT(tempMossa.muoviDa.y()==tempMossa.muoviA.y());
+        const QModelIndex torreIdx = indexForPoint(QPoint(tempMossa.muoviDa.x()>tempMossa.muoviA.x() ? 2:5,tempMossa.muoviA.y()));
+        Pezzo tempTorre = torreIdx.data().value<Pezzo>();
+        Q_ASSERT(tempTorre.tipo==Pezzo::Tipo::Torre);
+        tempTorre.primaMossa = true;
+        m_model->setData(
+            indexForPoint(QPoint(tempMossa.muoviDa.x()>tempMossa.muoviA.x() ? 0:7,tempMossa.muoviA.y()))
+            , QVariant::fromValue(tempTorre)
+        );
+        m_model->setData(torreIdx,QVariant());
+    }
+    else if(tempMossa.mangiatoEnPassant){
         Q_ASSERT(tempMossa.mangiato.valido());
         m_model->setData(m_model->index(tempMossa.muoviDa.y(),tempMossa.muoviA.x()),QVariant::fromValue(tempMossa.mangiato));
-        m_model->setData(indexForPoint(tempMossa.muoviA),QVariant());
     }
     else if(tempMossa.mangiato.valido()){
         m_model->setData(indexForPoint(tempMossa.muoviA),QVariant::fromValue(tempMossa.mangiato));
-    }
-    else{
-         m_model->setData(indexForPoint(tempMossa.muoviA),QVariant());
     }
     m_redoStack.push(tempMossa);
     if(m_redoStack.size()==1)
@@ -244,7 +255,15 @@ bool OggettoScacchi::undoMossa()
     cambiaTurno();
     return true;
 }
+bool OggettoScacchi::muovi(const Mossa &mossa)
+{
+    return muovi(mossa,false);
+}
 
+bool OggettoScacchi::muovi(const Mossa &mossa, bool salvaRedo)
+{
+    return muovi(mossa.muoviDa,mossa.muoviA,mossa.pedoneTrasformato,!salvaRedo);
+}
 bool OggettoScacchi::redoMossa()
 {
     if(m_redoStack.isEmpty())
@@ -252,7 +271,7 @@ bool OggettoScacchi::redoMossa()
     if(m_pezzoCorrente.y()>=0)
         usaPezzo(m_pezzoCorrente);
     const Mossa tempMossa = m_redoStack.pop();
-    muovi(tempMossa.muoviDa,tempMossa.muoviA,tempMossa.pedoneTrasformato,false);
+    Q_ASSUME(muovi(tempMossa,true));
     m_registroMosse.push(tempMossa);
     if(m_registroMosse.size()==1)
         undoEnabled(true);
@@ -260,6 +279,8 @@ bool OggettoScacchi::redoMossa()
         redoEnabled(false);
     return true;
 }
+
+
 
 void OggettoScacchi::formattaMossePossibili()
 {
